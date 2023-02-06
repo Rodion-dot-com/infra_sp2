@@ -84,7 +84,7 @@ class GenreViewSet(ListCreateDestroyViewSet):
 class TitleViewSet(viewsets.ModelViewSet):
     serializer_class = TitleReadSerializer
     queryset = Title.objects.annotate(
-            rating=Avg('reviews__score'))
+        rating=Avg('reviews__score'))
     pagination_class = PageNumberPagination
     permission_classes = (IsAdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
