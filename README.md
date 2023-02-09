@@ -11,6 +11,9 @@
 Шаблон наполнения env-файла
 ```
 SECRET_KEY=some-kind-of-key # установите ваш секретный ключ 
+DJANGO_SUPERUSER_USERNAME=admin # установите имя для суперпользователя
+DJANGO_SUPERUSER_EMAIL=admin@example.com # установите email для суперпользователя
+DJANGO_SUPERUSER_PASSWORD=password # установите пароль для суперпользователя
 DB_ENGINE=django.db.backends.postgresql # указываем, что работаем с postgresql
 DB_NAME=postgres # имя базы данных
 POSTGRES_USER=postgres # логин для подключения к базе данных
@@ -32,7 +35,7 @@ docker-compose up -d --build
 docker-compose exec web python manage.py migrate
 ```
 ```
-docker-compose exec web python manage.py createsuperuser
+docker-compose exec web python manage.py createsuperuser --no-input
 ```
 ```
 docker-compose exec web python manage.py collectstatic --no-input
