@@ -30,10 +30,15 @@ docker-compose up -d --build
 - Выполните по очереди команды
 ```
 docker-compose exec web python manage.py migrate
+```
+```
 docker-compose exec web python manage.py createsuperuser
+```
+```
 docker-compose exec web python manage.py collectstatic --no-input
 ```
-- Основной функционал готов, чтобы остановить и удалить контейнеры выполните команду
+- Основной функционал готов, проверить работу можно через [админку](http://localhost/admin/) 
+- Чтобы остановить и удалить контейнеры выполните команду
 ```
 docker-compose down -v
 ```
@@ -81,8 +86,8 @@ http://localhost/api/v1/users/
 ```
 Самостоятельная регистрация на форуме пользователем. Получение JWT-токена.
 ```
--http://localhost/api/v1/auth/signup/
+http://localhost/api/v1/auth/signup/
 ```
 ```
--http://localhost/api/v1/auth/token/
+http://localhost/api/v1/auth/token/
 ```
