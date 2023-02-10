@@ -52,7 +52,7 @@ cd infra/
 ```
 - Скопируйте файл fixtures.json внутрь контейнера web
 ```
-docker cp fixtures.json <CONTAINER>:/app
+docker-compose cp fixtures.json web:/app
 ```
 - Выполните команду для заполнения базы данными
 ```
