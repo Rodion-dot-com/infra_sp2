@@ -1,7 +1,5 @@
-from django.shortcuts import get_object_or_404
 from rest_framework import exceptions, serializers
 from rest_framework.relations import SlugRelatedField
-from rest_framework.validators import UniqueValidator
 from reviews.models import Category, Comment, Genre, Review, Title, User
 
 
@@ -18,17 +16,15 @@ class GenreSerializer(serializers.ModelSerializer):
 
 
 class TitleReadSerializer(serializers.ModelSerializer):
-    rating = serializers.IntegerField()
-    genre = GenreSerializer(many=True, source='genres')
-    category = CategorySerializer()
+    rating = serializers.IntegerField(read_only=True)
+    genre = GenreSerializer(read_only=True, many=True, source='genres')
+    category = CategorySerializer(read_only=True)
 
     class Meta:
         fields = (
             'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
         )
-        read_only_fields = (
-            'name', 'year', 'rating', 'description', 'genre', 'category'
-        )
+        read_only_fields = ('name', 'year', 'description')
         model = Title
 
 
@@ -46,23 +42,21 @@ class TitleCreateUpdateDestroySerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
-    title = SlugRelatedField(slug_field='name', read_only=True,
-                             default=serializers.CurrentUserDefault())
     author = SlugRelatedField(slug_field='username', read_only=True,
                               default=serializers.CurrentUserDefault())
 
     class Meta:
-        fields = ('id', 'title', 'text', 'author', 'score', 'pub_date')
+        fields = ('id', 'text', 'author', 'score', 'pub_date')
         model = Review
 
     def validate(self, attrs):
-        if self.context.get('request').method == 'POST':
-            author = self.context.get('request').user
-            title_id = self.context.get('view').kwargs.get('titles_id')
-            title = get_object_or_404(Title, id=title_id)
-            if Review.objects.filter(title=title, author=author).exists():
-                raise serializers.ValidationError(
-                    'На каждое произведение можно оставить только одно ревью')
+        if self.context.get('request').method != 'POST':
+            return attrs
+        author = self.context.get('request').user
+        title_id = self.context.get('view').kwargs.get('titles_id')
+        if Review.objects.filter(title__id=title_id, author=author).exists():
+            raise serializers.ValidationError(
+                'На каждое произведение можно оставить только одно ревью')
         return attrs
 
 
@@ -70,8 +64,7 @@ class CommentSerializer(serializers.ModelSerializer):
     author = SlugRelatedField(slug_field='username', read_only=True)
 
     class Meta:
-        fields = ('id', 'review', 'text', 'author', 'pub_date')
-        read_only_fields = ('review',)
+        fields = ('id', 'text', 'author', 'pub_date')
         model = Comment
 
 
@@ -79,9 +72,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'username', 'email', 'first_name', 'last_name', 'bio', 'role'
-        )
-        read_only_fields = ('role',)
+            'username', 'email', 'first_name', 'last_name', 'bio', 'role')
 
     def validate_username(self, value):
         if value == 'me':
@@ -89,14 +80,11 @@ class UserSerializer(serializers.ModelSerializer):
         return value
 
 
-class AdminSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(
-        validators=[UniqueValidator(queryset=User.objects.all())])
-
+class SignUpSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            'username', 'email', 'first_name', 'last_name', 'bio', 'role')
+            'username', 'email')
 
     def validate_username(self, value):
         if value == 'me':

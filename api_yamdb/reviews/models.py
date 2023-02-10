@@ -1,9 +1,7 @@
-from datetime import MINYEAR, datetime
-
-from django.contrib.auth.models import AbstractUser, UserManager
-from django.core.exceptions import ValidationError
+from django.contrib.auth.models import AbstractUser
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from reviews.validators import validate_year
 
 GENRE_NAME_MAX_LENGTH = 256
 GENRE_SLUG_MAX_LENGTH = 50
@@ -13,28 +11,11 @@ CATEGORY_SLUG_MAX_LENGTH = 50
 USER = 'user'
 MODERATOR = 'moderator'
 ADMIN = 'admin'
-ROLES = [
-    ('user', USER),
-    ('moderator', MODERATOR),
-    ('admin', ADMIN)
-]
-
-
-class MyUserManager(UserManager):
-    """Проверка наличия emai."""
-
-    def create_user(self, username, email, password, **extra_fields):
-        if not email:
-            raise ValueError('Поле email обязательное')
-        if username == 'me':
-            raise ValueError('me использовать нельзя')
-        return super().create_user(
-            username, email=email, password=password, **extra_fields)
-
-    def create_superuser(
-            self, username, email, password, role=ADMIN, **extra_fields):
-        return super().create_superuser(
-            username, email, password, role=ADMIN, **extra_fields)
+ROLES = (
+    (USER, 'Пользователь'),
+    (MODERATOR, 'Модератор'),
+    (ADMIN, 'Администратор')
+)
 
 
 class User(AbstractUser):
@@ -52,9 +33,6 @@ class User(AbstractUser):
         default=USER,
         verbose_name='Роль',
     )
-    objects = MyUserManager()
-
-    REQUIRED_FIELDS = ('email', 'password')
 
     class Meta:
         ordering = ('id',)
@@ -63,13 +41,11 @@ class User(AbstractUser):
 
     @property
     def is_admin(self):
-        return any(
-            [self.role == ADMIN, self.is_superuser]
-        )
+        return any((self.role == ADMIN, self.is_superuser))
 
     @property
     def is_moderator(self):
-        return self.role == MODERATOR
+        return any((self.role == MODERATOR, self.is_superuser))
 
 
 class Genre(models.Model):
@@ -79,7 +55,7 @@ class Genre(models.Model):
                             verbose_name='Уникальное имя')
 
     class Meta:
-        ordering = ['-id']
+        ordering = ('-id',)
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
 
@@ -94,7 +70,7 @@ class Category(models.Model):
                             verbose_name='Уникальное имя')
 
     class Meta:
-        ordering = ['-id']
+        ordering = ('-id',)
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
 
@@ -102,17 +78,12 @@ class Category(models.Model):
         return self.name
 
 
-def validate_year(value):
-    if value < MINYEAR or value > datetime.now().year:
-        raise ValidationError('Год указан неправильно')
-
-
 class Title(models.Model):
     name = models.TextField(verbose_name='Название')
-    year = models.IntegerField(validators=[validate_year],
-                               verbose_name='Год выпуска')
-    description = models.TextField(null=True, blank=True,
-                                   verbose_name='Описание')
+    year = models.PositiveSmallIntegerField(validators=(validate_year,),
+                                            verbose_name='Год выпуска',
+                                            db_index=True)
+    description = models.TextField(blank=True, verbose_name='Описание')
     genres = models.ManyToManyField(Genre, through='TitleGenre',
                                     verbose_name='Жанры')
     category = models.ForeignKey(Category, related_name='titles', null=True,
@@ -120,7 +91,7 @@ class Title(models.Model):
                                  verbose_name='Категория')
 
     class Meta:
-        ordering = ['-id']
+        ordering = ('-id',)
         verbose_name = 'Произведение'
         verbose_name_plural = 'Произведения'
 
@@ -154,26 +125,27 @@ class Review(models.Model):
         related_name='reviews',
         verbose_name='Автор'
     )
-    score = models.IntegerField(
+    score = models.PositiveSmallIntegerField(
         verbose_name='Оценка произведения',
-        validators=[
+        validators=(
             MinValueValidator(1),
             MaxValueValidator(10)
-        ]
+        )
     )
     pub_date = models.DateTimeField(
         auto_now_add=True,
-        verbose_name='Дата публикации'
+        verbose_name='Дата публикации',
+        db_index=True
     )
 
     class Meta:
-        ordering = ['-id']
-        constraints = [
+        ordering = ('-pub_date',)
+        constraints = (
             models.UniqueConstraint(
-                fields=['title', 'author'],
+                fields=('title', 'author'),
                 name='unique_title_author'
-            )
-        ]
+            ),
+        )
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
 
@@ -196,10 +168,11 @@ class Comment(models.Model):
     )
     pub_date = models.DateTimeField(
         auto_now_add=True,
-        verbose_name='Дата добавления'
+        verbose_name='Дата добавления',
+        db_index=True
     )
 
     class Meta:
-        ordering = ['-id']
+        ordering = ('-pub_date',)
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
